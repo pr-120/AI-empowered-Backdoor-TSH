@@ -1,0 +1,13 @@
+#!/usr/bin/expect
+
+# Start the tick console and automate interaction
+expect << 'EOF'
+  spawn screen -S thetick ~/BA/thetick/tick.py
+  puts "screen created"
+  sleep 30 
+  send "use 0\n"
+  send "exec whoami\r"
+  expect "admin"
+  interact             ;# Keeps the session open for manual interaction
+EOF
+

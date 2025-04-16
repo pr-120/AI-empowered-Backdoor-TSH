@@ -1,0 +1,33 @@
+#!/usr/bin/expect
+
+# Activate the Conda environment within Expect
+spawn bash
+send "source ~/anaconda3/bin/activate py27\r"
+expect "$ "
+
+# Start the tick console in the Conda environment
+send "screen -S thetick ~/BA/thetick/tick.py\r"
+
+# Wait for the tick.py process to be ready
+expect -re {Bot [0-9]+ \[[^\]]+\] connected from [0-9.]+}
+
+puts "screen created\r"
+
+# Wait for the tick.py process to be ready
+sleep 30
+
+# Send commands to the tick console
+send "use 0\r"
+send "exec whoami\r"
+expect "admin"
+
+# Keep the session open for manual interaction
+interact
+
+# need to deactivate twice to exit local env and base env
+send "conda deactivate"
+send "conda deactivate"
+
+# Exit the bash session
+send "exit\r"
+expect eof
