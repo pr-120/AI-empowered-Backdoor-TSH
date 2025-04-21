@@ -15,11 +15,10 @@
 #include <sys/statvfs.h>
 #include <stdlib.h>
 #include <time.h>
-
-#include <json-c/json.h>
+#include <limits.h>
 #include <string.h>
 
-
+#include <cjson/cJSON.h>
 #include "file.h"
 
 // Helper function to copy a file stream.
@@ -32,7 +31,7 @@
 int copy_stream(int source, int destination, ssize_t count, const config_t *config)
 {
 
-	char *buffer = malloc(config->bufferSize);
+char *buffer = malloc(config->bufferSize);
 	if (!buffer) {
 		return -1;
 	}
@@ -41,10 +40,15 @@ int copy_stream(int source, int destination, ssize_t count, const config_t *conf
 	ssize_t block = 0;
 	int counter = 0;
 
-	if (count == 0) return 0;
+	if (count == 0) {
+		free(buffer);
+		 return 0;
+	}
+	printf("haha");
 	while (count < 0 || copied < count) {
-		block = read(source, buffer, sizeof(buffer));
+		block = read(source, buffer, config->bufferSize);
 		if (block < 0 || (block == 0 && count > 0 && copied < count)) {
+			free(buffer);
 			return -1;
 		}
 		if (block == 0) {
@@ -69,13 +73,11 @@ int copy_stream(int source, int destination, ssize_t count, const config_t *conf
 
 			// if the burstDuration is reached we pause for a longer time
 			if (counter % config->burstDuration == 0) {
-				req.tv_sec = config->pauseBetweenBursts / 1000;
-				req.tv_nsec = (pauseBetweenBursts % 1000) * 1000000;
+				req.tv_nsec = config->pauseBetweenBursts * 1000000000;
 			}
 			// else take a normal requestInterval pause
 			else {
-				req.tv_sec = config->transferFrequency / 1000;
-				req.tv_nsec = (config->transferFrequency % 1000) * 1000000;
+				req.tv_nsec = config->transferFrequency * 1000000000;
 			}
 			nanosleep(&req, NULL);
 		}
@@ -87,84 +89,102 @@ int copy_stream(int source, int destination, ssize_t count, const config_t *conf
 
 
 // helper function to get config of malicious behavior
-int read_config(const char *filename, config_t *config) {
-	FILE *file = fopen(filename, "r");
-	if (!file) {
-		fprintf(stderr, "Error: Cannot open config file '%s'\n", filename);
-        	return -1;
+cJSON *read_json(const char *fileconfig_identifier) {
+	FILE *fp = fopen(fileconfig_identifier, "rb");
+	if (!fp) return NULL;
+	fseek(fp, 0, SEEK_END);
+	long sz = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+
+	char *buf = malloc(sz+1);
+	if (!buf) { fclose(fp); return NULL; }
+	if (fread(buf, 1, sz, fp) != sz) {
+		free(buf); fclose(fp); return NULL;
+	}
+	buf[sz]='\0';
+	fclose(fp);
+
+	cJSON *root = cJSON_Parse(buf);
+	free(buf);
+	return root;	
+
+}
+
+
+// fills config struct with data of current config
+int load_config(const char* config_identifier, config_t *cfg) {
+
+	if (!config_identifier || !cfg) return -1;
+
+	char file_path[PATH_MAX];
+	const char *base_dir = "/home/patrik/BA/server/roar_server/rw-configs/";
+	int n = snprintf(file_path, sizeof(file_path), "%sconfig-%s.json", base_dir, config_identifier);
+	if (n < 0 || (size_t)n >= sizeof(file_path)) {
+		return -2; // path buffer overflow
 	}
 
-	// Get file size
-	fseek(file, 0, SEEK_END);
-	long file_size = ftell(file);
-	fseek(file, 0, SEEK_SET);
-
-	// Read file content
-	char *buffer = malloc(file_size + 1);
-	if (!buffer) {
-		fclose(file);
-		fprintf(stderr, "Error: Memory allocation failed\n");
-		return -1;
-	}
-	size_t read_size = fread(buffer, 1, file_size, file);
-	buffer[read_size] = '\0';
-	fclose(file);
-
-	if (read_size != file_size) {
-		free(buffer);
-		fprintf(stderr, "Error: Failed to read config file\n");
-		return -1;
+	cJSON *root = read_json(file_path);
+	
+	if (!root) {
+		return -4; // JSON parse error
 	}
 
-	// Parse JSON
-	struct json_object *parsed_json = json_tokener_parse(buffer);
-	free(buffer);
-	if (!parsed_json) {
-		fprintf(stderr, "Error: Invalid JSON in config file\n");
-		return -1;
+	// Extract and validate each field
+	cJSON *item = NULL;
+
+	item = cJSON_GetObjectItemCaseSensitive(root, "buffer_size");
+	if (cJSON_IsNumber(item)) {
+		cfg->bufferSize = item->valueint;
+	} else {
+		cJSON_Delete(root);
+		return -5;
 	}
 
-	// Extract fields
-	struct json_object *j_bufferSize, *j_transferFrequency, *j_burstDuration, *j_pauseDuration;
-	int success = 1;
-
-	if (!json_object_object_get_ex(parsed_json, "bufferSize", &j_bufferSize) ||
-			!json_object_is_type(j_bufferSize, json_type_int)) {
-		fprintf(stderr, "Error: Missing or invalid 'bufferSize' in config\n");
-		success = 0;
-	}
-	if (!json_object_object_get_ex(parsed_json, "transferFrequency", &j_transferFrequency) ||
-			!json_object_is_type(j_transferFrequency, json_type_int)) {
-		fprintf(stderr, "Error: Missing or invalid 'transferFrequency' in config\n");
-		success = 0;
-	}
-	if (!json_object_object_get_ex(parsed_json, "burstDuration", &j_burstDuration) ||
-			!json_object_is_type(j_burstDuration, json_type_int)) {
-		fprintf(stderr, "Error: Missing or invalid 'burstDuration' in config\n");
-		success = 0;
-	}
-	if (!json_object_object_get_ex(parsed_json, "pauseDuration", &j_pauseDuration) ||
-			!json_object_is_type(j_pauseDuration, json_type_int)) {
-		fprintf(stderr, "Error: Missing or invalid 'pauseDuration' in config\n");
-		success = 0;
+	item = cJSON_GetObjectItemCaseSensitive(root, "transfer_frequency");
+	if (cJSON_IsNumber(item)) {
+		cfg->transferFrequency = item->valueint;
+	} else {
+		cJSON_Delete(root);
+		return -6;
 	}
 
-	if (success) {
-		config->bufferSize = json_object_get_int(j_bufferSize);
-		config->transferFrequency = json_object_get_int(j_transferFrequency);
-		config->burstDuration = json_object_get_int(j_burstDuration);
-		config->pauseDuration = json_object_get_int(j_pauseDuration);
-
-		// Validate values
-		if (config->bufferSize <= 0 || config->transferFrequency <= 0 ||
-				config->burstDuration < 0 || config->pauseDuration < 0) {
-			fprintf(stderr, "Error: Config values must be positive (except pauseDuration)\n");
-			success = 0;
-		}
+	item = cJSON_GetObjectItemCaseSensitive(root, "burst_duration");
+	if (cJSON_IsNumber(item)) {
+		cfg->burstDuration = item->valueint;
+	} else {
+		cJSON_Delete(root);
+		return -7;
 	}
 
-	json_object_put(parsed_json); // Free JSON object
-	return success ? 0 : -1;
+	item = cJSON_GetObjectItemCaseSensitive(root, "burst_pause");
+	if (cJSON_IsNumber(item)) {
+		cfg->pauseBetweenBursts = item->valueint;
+	} else {
+		cJSON_Delete(root);
+		return -8;
+	}
+
+	cJSON_Delete(root);
+	return 0;	
+
+}
+
+
+// returns the identifier of the configuration currently in use
+char* get_current_config() {
+	cJSON *current_config_file = read_json("/home/patrik/BA/config/current_configuration.json");
+	
+	if (!current_config_file) return NULL;
+
+	cJSON *config = cJSON_GetObjectItemCaseSensitive(current_config_file, "current_config");
+	char* return_value = NULL;
+	
+	if (cJSON_IsString(config) && (config->valuestring != NULL)) {
+		return_value = strdup(config->valuestring);
+	}
+
+	cJSON_Delete(current_config_file);
+	return return_value;
 }
 
 

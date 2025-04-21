@@ -171,10 +171,16 @@ void do_file_read(Parser *p)
 	}
 
 	config_t config;
-	if (read_config("~/BA/config/malcious_config.json", &config) != 0) {
+
+	char *cfg_id = get_current_config();
+
+	// loads the config used currently into the config struct 
+	if (!cfg_id ¦¦ load_config(cfg_id, &config) != 0) {
 		fprintf(stderr, "Failed to read config\n");
+		free(cfg_id);
 		return 1;
 	}
+	free(cfg_id); // free after successful load
 
 	// Send the file in the response.
 	// Close the connection if something goes wrong at this point.

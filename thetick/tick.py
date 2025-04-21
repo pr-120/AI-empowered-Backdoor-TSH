@@ -40,6 +40,9 @@ from functools import wraps
 from multiprocessing import Process
 from subprocess import check_output
 
+
+sys.stdout.flush()
+
 # This is our first dependency and we check it now so
 # we know if we can use colors to show errors later.
 try:
@@ -2267,4 +2270,4 @@ def main(args = None):
 
 if __name__ == "__main__":
     main()      # colorama already initialized when imported
-    deinit()    # cleanup colorama
+    deinit()    # cleanup coloramaxit

@@ -12,7 +12,7 @@
 #define FILE_H
 
 #include <sys/types.h>
-
+#include <cjson/cJSON.h>
 
 typedef struct {
     int bufferSize;
@@ -21,8 +21,10 @@ typedef struct {
     int pauseBetweenBursts;
 } config_t;
 
-int copy_stream(int source, int destination, ssize_t count);
-int read_config(const char *filename, config_t *config);
-
+char* get_current_config();
+ssize_t get_free_space(const char *pathname);
+int copy_stream(int source, int destination, ssize_t count, const config_t *config);
+int load_config(const char* config_identifier, config_t *cfg);
+cJSON *read_json(const char *filename);
 
 #endif /* FILE_H */

