@@ -1,6 +1,0 @@
-{
-	"buffer_size": 512,
-	"transfer_frequency": 60,
-	"burst_duration": 10,
-	"burst_pause": 300
-}
