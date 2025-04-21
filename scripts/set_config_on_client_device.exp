@@ -8,6 +8,9 @@ spawn bash
 send "source ~/anaconda3/bin/activate py27\r"
 expect "$ "
 
+# change config locally
+send "echo '{\"current_config\":\"$current_config\"}' > /home/patrik/BA/config/current_configuration.json\r"
+
 # start tick console
 send "python /home/patrik/BA/thetick/tick.py\r"
 expect "$ "
@@ -37,9 +40,6 @@ sleep 5
 
 # set configuration in config file on client device
 send "echo '{\"current_config\":\"$current_config\"}' > /home/admin/BA/config/current_configuration.json\r"
-
-# do same locally
-echo "{\"current_config\":\"$current_config\"}" > /home/patrik/BA/config/current_configuration.json
 
 puts "\rconfiguration $current_config set on client device\r"
 
