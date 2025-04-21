@@ -2,6 +2,7 @@
 
 set current_config [lindex $argv 0]
 
+
 puts "\r ** SETTING CONFIG ON CLIENT DEVICE **\r\n"
 # Activate the Conda environment within Expect
 spawn bash 
@@ -31,15 +32,18 @@ sleep 5
 send "use 0\r"
 expect "$ "
 
-# start interactive shell
-send "shell\r"
-sleep 5
-
-# set configuration in config file on client device
-send "echo '{\"current_config\":\"$current_config\"}' > /home/admin/BA/config/current_configuration.json\r"
-
-# do same locally
-echo "{\"current_config\":\"$current_config\"}" > /home/patrik/BA/config/current_configuration.json
-
-puts "\rconfiguration $current_config set on client device\r"
+while 1>0 {
+	send "exec cat /home/admin/BA/config/fp_done.flag\r"
+	set timeout 10
+	
+        expect {
+		"fp finished successfully" {
+			puts "\rfingerprinting finished, stopping malicious behavior\r"
+			exit 0
+		}
+		timeout {
+			puts "\rfp still running \r"
+		}
+   	}
+}
 

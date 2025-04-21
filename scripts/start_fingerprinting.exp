@@ -1,8 +1,8 @@
 #!/usr/bin/expect -f
 
-puts "\r ** START FINGERPRINTING ON CLIENT DEVICE ** \r\n"
-
 set number_of_fingerprints_to_be_made [lindex $argv 0]
+
+puts "\r ** START FINGERPRINTING ON CLIENT DEVICE ** \r\n"
 
 # Activate the Conda environment within Expect
 spawn bash 
@@ -32,10 +32,15 @@ sleep 5
 send "use 0\r"
 expect "$ "
 
+# make sure that fingerprinting file can be executed
+send "chmod /home/admin/BA/fingerprinting/fingerprinter.sh 777\r"
+#expect -re {\[Bot.*\]}
+
 # starts interactive shell inside tick console
 send "shell\r"	
 sleep 5
 
+puts "\rreached shell\r"
 
 # start fingerprinting in screen on client device, makes sure the script stays running after leaving the shell
 set fingerprinting_shell_script_location "/home/admin/BA/fingerprinting/fingerprinter.sh"
