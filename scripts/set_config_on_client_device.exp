@@ -17,7 +17,7 @@ expect "$ "
 
 
 # wait until bot has connected
-set timeout 30
+set timeout 35
 expect {
     -re {Bot [0-9]+ \[[^\]]+\] connected from [0-9.]+} {
         puts "\r✅ Bot connected.\r"

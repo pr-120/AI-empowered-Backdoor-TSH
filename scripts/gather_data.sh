@@ -14,7 +14,7 @@ sleep 5
 #trap "echo 'Stopping server...'; kill $SERVER_PID" EXIT
 
 # which configurations to run, key describes number of config
-configurations=(5)
+configurations=("normal" 1 2 3 4 5)
 
 # select configs to gather data for
 for config in "${configurations[@]}"; do
@@ -26,13 +26,16 @@ for config in "${configurations[@]}"; do
 
 	# collect more data of normal workings
 	if [ "$config" = "normal" ]; then
-		number_of_fingerprints_to_be_made=100
+		number_of_fingerprints_to_be_made=5
 			
 		# starts fingerprinting process on client device
 		expect -f ~/BA/scripts/start_fingerprinting.exp $number_of_fingerprints_to_be_made 
-	
+		
+		# terminates when fp is finished 	
+		expect -f ~/BA/scripts/check_fp_finished.exp
+		
 	else
-		number_of_fingerprints_to_be_made=30
+		number_of_fingerprints_to_be_made=5
 			
 		# starts fingerprinting process on client device
 		expect -f ~/BA/scripts/start_fingerprinting.exp $number_of_fingerprints_to_be_made 
@@ -46,7 +49,4 @@ for config in "${configurations[@]}"; do
 		
 	fi
 			
-		# terminates when fp is finished 	
-		expect -f ~/BA/scripts/check_fp_finished.exp $PROCESS_ID
-		
 done

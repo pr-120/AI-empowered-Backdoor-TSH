@@ -3,7 +3,7 @@
 set process_id [lindex $argv 0]
 
 
-puts "\r ** SETTING CONFIG ON CLIENT DEVICE **\r\n"
+puts "\r ** CHECKING FOR FP FINISHED **\r\n"
 # Activate the Conda environment within Expect
 spawn bash 
 send "source ~/anaconda3/bin/activate py27\r"
@@ -15,7 +15,7 @@ expect "$ "
 
 
 # wait until bot has connected
-set timeout 30
+set timeout 35
 expect {
     -re {Bot [0-9]+ \[[^\]]+\] connected from [0-9.]+} {
         puts "\r✅ Bot connected.\r"
