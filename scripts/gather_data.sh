@@ -6,12 +6,12 @@ conda activate py310
 
 # Start the server in the background and save the process ID 
 echo -e "\n ** STARTING SERVER **\n\n"
-#python ~/BA/server/roar_server/server.py -c &
-#SERVER_PID=$!
+python ~/BA/server/roar_server/server.py -c &
+SERVER_PID=$!
 sleep 5
 
 # kill server when script finishes
-#trap "echo 'Stopping server...'; kill $SERVER_PID" EXIT
+trap "echo 'Stopping server...'; kill $SERVER_PID" EXIT
 
 # which configurations to run, key describes number of config
 configurations=("normal" 0 1 2 3 4 5)
